@@ -1,5 +1,7 @@
-This is "Ground-State: Heisenberg model" from netket
+This is "Ground-State: Heisenberg model" from netket but not using the Heisenberg Hamiltonian
 
 The ground state energy per spin becomes: 
-U/N = -1/pi
+U/N = -1/pi = -0.31830988618
 
+if you use netket.operator.spin sigma's, you need a factor of 1/2 per sigma, to get the right value
+For this case, U/N = -4/pi = -1.27323954474
