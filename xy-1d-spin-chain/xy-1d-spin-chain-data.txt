@@ -1,0 +1,5 @@
+This is "Ground-State: Heisenberg model" from netket
+
+The ground state energy per spin becomes: 
+U/N = -1/pi
+
