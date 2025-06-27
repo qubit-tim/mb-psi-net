@@ -1,19 +1,13 @@
-# Import netket library
-import netket as nk
-from netket.operator.spin import sigmax, sigmay, sigmaz
-
-# Import Json, this will be needed to load log files
+import jax
 import json
-
-# Helper libraries
-import numpy as np
-import matplotlib.pyplot as plt
 import time
 
-from flax import nnx
 import jax.numpy as jnp
-import jax
+import matplotlib.pyplot as plt
+import netket as nk
 
+from flax import nnx
+from netket.operator.spin import sigmax, sigmay, sigmaz
 
 ####### CONSTANTS - START #######
 '''
@@ -24,12 +18,6 @@ H_xy = SUM(i) (Sx_i * Sx_i+1 + Sy_i * Sy_i+1)
 for both, S_N+1 = S_1 (periodic boundary condition)
 Ferromagnetic counterpart of H_xy, by defining HF = -H_xy
 '''
-
-# This is the exact ground-state energy of the Heisenberg model
-# exact_gs_energy = -39.14752260706246
-
-# This is the exact ground-state energy of the XY model
-# exact_gs_energy = -28.106696733329134
 
 n_iterations = 300  # number of iterations for the optimization
 n_samples = 10000    # number of samples for the Monte Carlo sampling
@@ -76,7 +64,7 @@ class Model2(nnx.Module):
 L = 10
 g = nk.graph.Hypercube(length=L, n_dim=1, pbc=False)
 
-#g.draw()
+g.draw()
 
 # Define the Hilbert space based on this graph
 # We impose to have a fixed total magnetization of zero 
@@ -101,7 +89,7 @@ exact_gs_energy = evals[0]
 #exact_gs_energy = -28.106696733329134
 print('The calculated exact ground-state energy is E0=',exact_gs_energy)
 print('The real calculated ground state (U/N): ', exact_gs_energy / L)
-print('The analytical ground state (U/N): -1/pi = ', -1/np.pi)
+print('The analytical ground state (U/N): -1/pi = ', -1/jnp.pi)
 
 
 # This is the exact ground-state energy of the Heisenberg model
