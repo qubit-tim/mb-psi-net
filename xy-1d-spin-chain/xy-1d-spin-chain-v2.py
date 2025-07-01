@@ -31,33 +31,58 @@ class Jastrow(nnx.Module):
 
 class FFModel(nnx.Module):
     def __init__(self, N: int, *, rngs: nnx.Rngs):
-        self.linear = nnx.Linear(in_features=N, out_features=2 * N, dtype=jnp.complex128, rngs=rngs)
+        k1, k2 = jax.random.split(rngs.params())
+        self.J = nnx.Param(0.01 * jax.random.normal(k1, (N, N),
+                                                    dtype=jnp.complex128))
+
+        self.v_bias = nnx.Param(0.01 * jax.random.normal(k2, (N, 1),
+                                                         dtype=jnp.complex128))
+        self.linear = nnx.Linear(
+            in_features=N, 
+            out_features=2 * N, 
+            dtype=jnp.complex128, 
+            param_dtype=jnp.complex128,
+            rngs=rngs)
 
     def __call__(self, x: jax.Array):
+        #x = x.astype(jnp.complex128)              # keep the dtypes aligned
         x = self.linear(x)
         x = nk.nn.activation.log_cosh(x)
-        return jnp.sum(x, axis=-1)
+        x = jnp.sum(x, axis=-1)
+        return x
     
 class FFModel2(nnx.Module):
     def __init__(self, N: int, *, rngs: nnx.Rngs):
-        self.linear1 = nnx.Linear(in_features=N, out_features=2 * N, dtype=jnp.complex128, rngs=rngs)
-        self.linear2 = nnx.Linear(in_features=2 * N, out_features=N, dtype=jnp.complex128, rngs=rngs)
+        self.linear1 = nnx.Linear(
+            in_features=N, 
+            out_features=2 * N, 
+            dtype=jnp.complex128, 
+            param_dtype=jnp.complex128,
+            rngs=rngs)
+        self.linear2 = nnx.Linear(
+            in_features=2 * N, 
+            out_features=N, 
+            dtype=jnp.complex128, 
+            param_dtype=jnp.complex128,
+            rngs=rngs)
 
     def __call__(self, x: jax.Array):
         x = self.linear1(x)
         x = nk.nn.activation.log_cosh(x)
         x = self.linear2(x)
         x = nk.nn.activation.log_cosh(x)
-        return jnp.sum(x, axis=-1)
+        x = jnp.sum(x, axis=-1)
+        return x
 
-def JastrowRun(hilbert, graph, n_samples=1000, n_iterations=1000, rngs=0, learning_rate=0.01, holomorphic=True):
+def JastrowRun(hilbert, graph, hamiltonian, n_samples=1000, n_iterations=1000, rngs=0, d_max=1, learning_rate=0.01, holomorphic=False):
     print('### Jastrow calculation')
     hi = hilbert
     g = graph
+    ha = hamiltonian
     # Model
     ma = Jastrow(N=hi.size, rngs=nnx.Rngs(rngs))
     # Sampler
-    sa = nk.sampler.MetropolisExchange(hilbert=hi,graph=g)
+    sa = nk.sampler.MetropolisExchange(hilbert=hi, graph=g, d_max=d_max)
     # Optimizer
     op = nk.optimizer.Sgd(learning_rate=learning_rate)
     # Stochastic Reconfiguration
@@ -103,15 +128,16 @@ def JastrowGraph(exact_gs_energy=0, logfile="Jastrow.log"):
     ax1.legend()
     plt.show()
 
-def RBMRun(hilbert, graph, n_samples=1000, n_iterations=1000, alpha=1, learning_rate=0.01, holomorphic=False):
+def RBMRun(hilbert, graph, hamiltonian, n_samples=1000, n_iterations=1000, alpha=1, d_max=1, learning_rate=0.01, holomorphic=False):
     print('### RBM calculation')
     hi = hilbert
     g = graph
+    ha = hamiltonian
     # alpha => ratio of visible spins to virtual spins in upper layers
     # Model
-    ma = nk.models.RBM(alpha=alpha)
+    ma = nk.models.RBM(alpha=alpha, param_dtype=jnp.complex128)
     # Sampler
-    sa = nk.sampler.MetropolisExchange(hilbert=hi,graph=g)
+    sa = nk.sampler.MetropolisExchange(hilbert=hi,graph=g, d_max=d_max)
     # Optimizer
     op = nk.optimizer.Sgd(learning_rate=learning_rate)
     # Stochastic Reconfiguration
@@ -157,14 +183,15 @@ def RBMGraph(exact_gs_energy=0, logfile="RBM.log"):
     ax1.legend()
     plt.show()
 
-def RBMSymmRun(hilbert, graph, n_samples=1000, n_iterations=1000, alpha=1, learning_rate=0.01, holomorphic=False):
+def RBMSymmRun(hilbert, graph, hamiltonian, n_samples=1000, n_iterations=1000, alpha=1, d_max=1, learning_rate=0.01, holomorphic=False):
     print('### Symmetric RBM calculation')
     hi = hilbert
     g = graph
+    ha = hamiltonian
     # Model
-    ma = nk.models.RBMSymm(symmetries=g.translation_group(), alpha=alpha)
+    ma = nk.models.RBMSymm(symmetries=g.translation_group(), alpha=alpha, param_dtype=jnp.complex128)
     # Sampler
-    sa = nk.sampler.MetropolisExchange(hi, graph=g)
+    sa = nk.sampler.MetropolisExchange(hi, graph=g, d_max=d_max)
     # Optimizer
     op = nk.optimizer.Sgd(learning_rate=learning_rate)
     # Stochastic Reconfiguration
@@ -210,14 +237,15 @@ def RBMSymmGraph(exact_gs_energy=0, logfile="RBMSymmetric.log"):
     ax1.legend()
     plt.show()
 
-def FFRun(hilbert, graph, n_samples=1000, n_iterations=1000, rngs=1, learning_rate=0.01, holomorphic=False):
+def FFRun(hilbert, graph, hamiltonian, n_samples=1000, n_iterations=1000, rngs=1, d_max=1, learning_rate=0.01, holomorphic=False):
     print('### Feed Forward calculation')
     hi = hilbert
     g = graph
+    ha = hamiltonian
     # Model
     ffnn = FFModel(N=hi.size, rngs=nnx.Rngs(rngs))
     # Sampler
-    sa = nk.sampler.MetropolisExchange(hi, graph=g)
+    sa = nk.sampler.MetropolisExchange(hi, graph=g, d_max=d_max)
     # Variational State
     vs = nk.vqs.MCState(sa, ffnn, n_samples=n_samples)
     # Optimizer
@@ -264,14 +292,15 @@ def FFGraph(exact_gs_energy=0, logfile="FF.log"):
     ax1.legend()
     plt.show()
 
-def FF2Run(hilbert, graph, n_samples=1000, n_iterations=1000, rngs=1, learning_rate=0.01, holomorphic=False):
+def FF2Run(hilbert, graph, hamiltonian, n_samples=1000, n_iterations=1000, rngs=1, d_max=1, learning_rate=0.01, holomorphic=False):
     print('### Feed Forward 2 calculation')
     hi = hilbert
     g = graph
+    ha = hamiltonian
     # Model
     ffnn = FFModel2(N=hi.size, rngs=nnx.Rngs(rngs))
     # Sampler
-    sa = nk.sampler.MetropolisExchange(hi, graph=g)
+    sa = nk.sampler.MetropolisExchange(hi, graph=g, d_max=d_max)
     # Variational State
     vs = nk.vqs.MCState(sa, ffnn, n_samples=n_samples)
     # Optimizer
@@ -347,10 +376,11 @@ if not pbc:
     ha = sum([(sigmax(hi, i) * sigmax(hi, i+1) + sigmay(hi, i) * sigmay(hi, i+1)) for i in range(0,N-1)])
 
 if heisenberg_hamiltonian:
-    print('### Using the Heisenberg Hamiltonian\n')
+    print('### Using the Heisenberg Hamiltonian')
     ha = nk.operator.Heisenberg(hilbert=hi, graph=g)
 else:
-    print('### Using the XY Hamiltonian\n')
+    print('### Using the XY Hamiltonian')
+print('### Hamiltonian:', ha.to_dense())
 
 
 if not exact_gs_energy:
@@ -367,8 +397,19 @@ print()
 print('### Expected Ground State from Models: ', exact_gs_energy)
 print()
 
-JastrowRun(hi, g, n_samples=1000, n_iterations=1000, rngs=0, learning_rate=0.01)
-RBMRun(hi, g, n_samples=1000, n_iterations=1000, alpha=1)
-RBMSymmRun(hi, g, n_samples=1000, n_iterations=1000, alpha=1)
-FFRun(hi, g, n_samples=1000, n_iterations=1000, rngs=1, learning_rate=0.01)
-FF2Run(hi, g, n_samples=1000, n_iterations=1000, rngs=1, learning_rate=0.01)
+n_s = 1000
+n_i = 300
+# Ok, the Rngs is actually the random number generator seed for the parameters of the model.
+# https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/rnglib.html
+# This has been renammed as such
+seed = 1 
+d_m = 1
+l_r = 0.01
+
+JastrowRun(hi, g, ha, n_samples=n_s, n_iterations=n_i, rngs=seed, d_max=d_m, learning_rate=l_r)
+RBMRun(hi, g, ha, n_samples=n_s, n_iterations=n_i, alpha=1, d_max=d_m)
+RBMSymmRun(hi, g, ha, n_samples=n_s, n_iterations=n_i, alpha=1, d_max=d_m)
+FFRun(hi, g, ha, n_samples=n_s, n_iterations=n_i, rngs=seed, d_max=d_m, learning_rate=l_r)
+FF2Run(hi, g, ha, n_samples=n_s, n_iterations=n_i, rngs=seed, d_max=d_m, learning_rate=l_r)
+#FFRun(hi, g, ha, n_samples=1000, n_iterations=1000, rngs=1, d_max=2, learning_rate=0.01)
+#FF2Run(hi, g, ha, n_samples=1000, n_iterations=1000, rngs=1, d_max=2, learning_rate=0.01)
