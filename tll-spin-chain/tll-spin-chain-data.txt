@@ -1,0 +1,12 @@
+
+sp_h = H_xy.to_sparse()
+print(sp_h.shape)
+> (2704156, 2704156)
+eig_vals, eig_vecs = eigsh(sp_h, k=2, which="SA")
+print("eigenvalues with scipy sparse:", eig_vals)
+> eigenvalues with scipy sparse: [-35.14134138 -33.49391553]
+
+
+evals = nk.exact.lanczos_ed(H_xy, compute_eigenvectors=False)
+exact_gs_energy = evals[0]
+The exact ground-state energy is E0= -35.141341382447116
