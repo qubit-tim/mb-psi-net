@@ -6,6 +6,7 @@ import netket as nk
 from flax import nnx
 
 class Jastrow(nnx.Module):
+    # Originally from https://netket.readthedocs.io/en/latest/tutorials/gs-ising.html#jastrow-ansatz
     def __init__(self, N: int, *, rngs: nnx.Rngs):
         k1, k2 = jax.random.split(rngs.params())
         self.J = nnx.Param(0.01 * jax.random.normal(k1, (N, N),
@@ -22,6 +23,7 @@ class Jastrow(nnx.Module):
 
 # TODO: Rename this class
 class FFModel(nnx.Module):
+    # Originally from https://netket.readthedocs.io/en/latest/tutorials/gs-heisenberg.html#learning-with-feed-forward-neural-networks
     def __init__(self, N: int, *, rngs: nnx.Rngs):
         k1, k2 = jax.random.split(rngs.params())
         self.J = nnx.Param(0.01 * jax.random.normal(k1, (N, N),
@@ -37,7 +39,6 @@ class FFModel(nnx.Module):
             rngs=rngs)
 
     def __call__(self, x: jax.Array):
-        #x = x.astype(jnp.complex128)              # keep the dtypes aligned
         x = self.linear(x)
         x = nk.nn.activation.log_cosh(x)
         x = jnp.sum(x, axis=-1)
@@ -45,6 +46,7 @@ class FFModel(nnx.Module):
 
 # TODO: Rename this class    
 class FFModel2(nnx.Module):
+    # Originally from https://netket.readthedocs.io/en/latest/tutorials/gs-heisenberg.html#learning-with-feed-forward-neural-networks
     def __init__(self, N: int, *, rngs: nnx.Rngs):
         self.linear1 = nnx.Linear(
             in_features=N, 

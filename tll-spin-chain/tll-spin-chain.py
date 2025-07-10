@@ -28,10 +28,9 @@ from mpi4py import MPI
 
 
 ####### CONSTANTS - START #######
-'''
-Hxy = - (hbar * J / 2) SUM(i<j) 1/(r^3 of i-j) (Sx_i Sx_j + Sy_i Sy_j)
-J = 2pi * 0.55 MHz
-'''
+# Hxy = - (hbar * J / 2) SUM(i<j) 1/(r^3 of i-j) (Sx_i Sx_j + Sy_i Sy_j)
+# J = 2pi * 0.55 MHz
+
 
 N = 24 # Number of particles in the circlular chain
 polygon_radius = 2.0 # the radius of the circumcircle of the polygon
