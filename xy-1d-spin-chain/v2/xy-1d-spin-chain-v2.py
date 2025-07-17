@@ -394,7 +394,9 @@ print('The nk.exact / N calculated ground state: ', exact_gs_energy / N)
 print('The analytical ground state * 4 (to match above calc): U/N = -4/pi :', -4/jnp.pi)
 print('The analytical ground state (U/N): -1/pi = ', -1/jnp.pi)
 print()
-print('### Expected Ground State from Models: ', exact_gs_energy)
+print('### These should be very close if not equal and are what we are looking for from the models')
+print('### Expected Ground State from NetKet Exact: ', exact_gs_energy)
+print('### Expected Ground State from Analytical Solution:', -4/jnp.pi * N)
 print()
 
 n_s = 1000
