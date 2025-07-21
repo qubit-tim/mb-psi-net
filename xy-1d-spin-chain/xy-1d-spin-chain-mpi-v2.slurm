@@ -34,8 +34,11 @@ module load python/3.12.1-33
 ## Source the venv
 source /home/tcosgrov/code/mb-psi-net/.venv/bin/activate
 
-# Tell NetKet to use sharding mode.
-export NETKET_EXPERIMENTAL_SHARDING=1
+# Tell NetKet to NOT use sharding mode.
+# Otherwise you get this: 
+# File "/home/tcosgrov/code/mb-psi-net/.venv/lib/python3.12/site-packages/netket/operator/_discrete_operator.py", line 69, in get_conn_padded
+# RuntimeError: When using Sharding mode, only jax operators are supported.
+export NETKET_EXPERIMENTAL_SHARDING=0
 # Tell Jax that we want to use GPUs. This is generally not needed but can't hurt
 export JAX_PLATFORM_NAME=gpu
 
