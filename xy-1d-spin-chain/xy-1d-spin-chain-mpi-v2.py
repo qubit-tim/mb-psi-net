@@ -11,7 +11,6 @@ import netket as nk
 
 from dataclasses import dataclass, field
 from flax import nnx
-from mpi4py import MPI
 from netket.operator.spin import sigmax, sigmay, sigmaz
 
 # The following classes are based on:
@@ -249,11 +248,6 @@ class ModelRun():
         print('- Number of Parameters: ', nk.jax.tree_size(self.variational_state.parameters))
         print('- Seconds to perform the calculation:', end - start)
         print()
-
-# Set up MPI
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-size = comm.Get_size()
 
 # Initialization parameters
 N = 10
