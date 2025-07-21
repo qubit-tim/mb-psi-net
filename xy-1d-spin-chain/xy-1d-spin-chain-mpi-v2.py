@@ -275,7 +275,7 @@ def main():
     node_counts = jnp.array([10, 20, 40, 80, 160])
     exact_gs_energy_multiple = -1.2732395447351628
     samples = jnp.array([1000, 2000, 4000, 8000, 16000])
-    iterations = jnp.array([300, 600, 1200, 2400, 4800])
+    iterations = jnp.array([300, 600, 1200, 2400, 4800, 9600])
     learning_rates = jnp.array([0.001, 0.01, 0.1, 1, 10])
     alphas = jnp.array([0.1, 0.5, 1.0, 2.0, 5.0])
     d_m = 1 # Maximum distance for the Metropolis sampler
