@@ -1,11 +1,15 @@
 import jax
+import os
 
-# Initialize distributed JAX (works automatically with SLURM)
-jax.distributed.initialize()
-
-# Always print this to verify correct setup
-print(f"[{jax.process_index()}/{jax.process_count()}] devices:", jax.devices(), flush=True)
-print(f"[{jax.process_index()}/{jax.process_count()}] local devices:", jax.local_devices(), flush=True)
+outdir = 'out/'
+# TODO: Setup distributed JAX only on SLURM and setup the correct output directory
+if os.getenv('SLURM_JOB_ID') is not None:
+    # This is a SLURM job, initialize distributed JAX
+    jax.distributed.initialize()
+    outdir = '/scratch/tcosgrov/out/'  # Change this to your desired output directory on SLURM
+    # Always print this to verify correct setup
+    print(f"[{jax.process_index()}/{jax.process_count()}] devices:", jax.devices(), flush=True)
+    print(f"[{jax.process_index()}/{jax.process_count()}] local devices:", jax.local_devices(), flush=True)
 
 import time
 import warnings
@@ -235,10 +239,14 @@ class ModelRun():
         if self.driver is None:
             raise ValueError("Driver must be set before running the model.")
         
-        print(f'### Running {self.config.model_type} Model')
+        if self.config.model_type == "RBM" or self.config.model_type == "RBMSymm":
+            print(f'### Running {self.config.model_type} Model: {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}, alpha {self.config.alpha}')
+        else:
+            print(f'### Running {self.config.model_type} Model: {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}')
         
         start = time.time()
         out = str(self.config.output_dir) + f"{self.config.model_type}-it-{n_iterations}-sa-{self.config.n_samples}-sd-{self.config.seed}"
+        print(f'### Output directory: {out}')
         if self.config.model_type == "RBM" or self.config.model_type == "RBMSymm":
             out += f"-al-{self.config.alpha}"
         self.driver.run(out=out, n_iter=n_iterations)
@@ -347,7 +355,7 @@ rbm_config = RunConfig(
     hamiltonian=ha,
     exact_sol=exact_gs_energy,
     # if running on Hopper, use the following output directory
-    output_dir='/scratch/tcosgrov/out/',
+    output_dir=outdir,
     # if running on a local machine, use the following output directory
     #output_dir='out/',
     n_samples=n_s,
