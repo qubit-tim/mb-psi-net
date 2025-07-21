@@ -248,6 +248,9 @@ class ModelRun():
         print(f'Output directory: {out}')
         if self.config.model_type == "RBM" or self.config.model_type == "RBMSymm":
             out += f"-al-{self.config.alpha}"
+        else:
+            out += f"-lr-{self.config.learning_rate}"
+        
         self.driver.run(out=out, n_iter=n_iterations)
         end = time.time()
 
