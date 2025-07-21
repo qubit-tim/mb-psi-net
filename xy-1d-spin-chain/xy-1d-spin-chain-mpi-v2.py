@@ -346,7 +346,10 @@ rbm_config = RunConfig(
     graph=g,
     hamiltonian=ha,
     exact_sol=exact_gs_energy,
-    output_dir='out/',
+    # if running on Hopper, use the following output directory
+    output_dir='/scratch/tcosgrov/out/',
+    # if running on a local machine, use the following output directory
+    #output_dir='out/',
     n_samples=n_s,
     n_iterations=n_i,
     seed=seed,

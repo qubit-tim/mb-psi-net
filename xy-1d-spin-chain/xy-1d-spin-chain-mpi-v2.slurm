@@ -39,4 +39,4 @@ export NETKET_EXPERIMENTAL_SHARDING=1
 # Tell Jax that we want to use GPUs. This is generally not needed but can't hurt
 export JAX_PLATFORM_NAME=gpu
 
-python /home/tcosgrov/code/mb-psi-net/xy-1d-spin-chain/xy-1d-spin-chain-mpi-v2.py
+srun -uv python /home/tcosgrov/code/mb-psi-net/xy-1d-spin-chain/xy-1d-spin-chain-mpi-v2.py
