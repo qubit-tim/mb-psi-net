@@ -241,7 +241,7 @@ class ModelRun():
         if self.config.model_type == "RBM" or self.config.model_type == "RBMSymm":
             print(f'Running {self.config.model_type} Model: {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}, alpha {self.config.alpha}')
         else:
-            print(f'Running {self.config.model_type} Model: {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}')
+            print(f'Running {self.config.model_type} Model: {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}, learning rate {self.config.learning_rate}')
 
         start = time.time()
         out = str(self.config.output_dir) + f"{self.config.model_type}-it-{n_iterations}-sa-{self.config.n_samples}-sd-{self.config.seed}"
@@ -272,12 +272,17 @@ def main():
     seed = random.randint(0, 2**32)  # Random seed for reproducibility
     
     # These will be iterated over
-    node_counts = jnp.array([10, 20, 40, 80, 160])
+    #node_counts = jnp.array([10, 20, 40, 80, 160])
+    node_counts = jnp.array([10])
     exact_gs_energy_multiple = -1.2732395447351628
-    samples = jnp.array([1000, 2000, 4000, 8000, 16000])
-    iterations = jnp.array([300, 600, 1200, 2400, 4800])
-    learning_rates = jnp.array([0.001, 0.01, 0.1, 1, 10])
-    alphas = jnp.array([0.1, 0.5, 1.0, 2.0, 5.0])
+    #samples = jnp.array([1000, 2000, 4000, 8000, 16000])
+    samples = jnp.array([1000])
+    #iterations = jnp.array([300, 600, 1200, 2400, 4800])
+    iterations = jnp.array([300])
+    #learning_rates = jnp.array([0.001, 0.01, 0.1, 1, 10])
+    learning_rates = jnp.array([0.001, 0.01, 0.1])
+    #alphas = jnp.array([0.1, 0.5, 1.0, 2.0, 5.0])
+    alphas = jnp.array([1.0, 2.0, 5.0])
     d_m = 1 # Maximum distance for the Metropolis sampler
     
     if ignore_warnings:
