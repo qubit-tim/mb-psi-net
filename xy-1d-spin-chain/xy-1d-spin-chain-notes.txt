@@ -1,0 +1,42 @@
+
+Jastrow Run Parameters:
+- n_samples -> MCState
+- n_iterations -> gs.run
+- rngs -> Jastrow
+- d_max -> MetropolisExchange Sampler
+- learning_rate -> sgd optimizer
+- diag_shift -> optimizer SR
+
+FF Run Parameters:
+- n_samples -> MCState
+- n_iterations -> gs.run
+- rngs -> FFModel
+- d_max -> MetropolisExchange Sampler
+- learning_rate -> sgd optimizer
+- diag_shift -> optimizer SR
+
+FF2 Run Parameters:
+- n_samples -> MCState
+- n_iterations -> gs.run
+- rngs -> FFModel
+- d_max -> MetropolisExchange Sampler
+- learning_rate -> sgd optimizer
+- diag_shift -> optimizer SR
+
+
+RBM Run Parameters:
+- alpha -> RBM
+- n_samples -> MCState
+- n_iterations -> gs.run
+- d_max -> MetropolisExchange Sampler
+- learning_rate -> sgd optimizer
+- diag_shift -> optimizer SR
+
+RBM Run Parameters:
+- alpha -> RBMSymm
+- symmetries -> RBMSymm
+- n_samples -> MCState
+- n_iterations -> gs.run
+- d_max -> MetropolisExchange Sampler
+- learning_rate -> sgd optimizer
+- diag_shift -> optimizer SR
