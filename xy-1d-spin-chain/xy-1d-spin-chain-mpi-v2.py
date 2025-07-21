@@ -114,7 +114,7 @@ class RunConfig:
     optimizer: OptimizerConfig = field(default_factory=OptimizerConfig)
     diag_shift: float = 0.1  # Used for SR preconditioner
     # Parameters for the model
-    exact_sol: float = 0.0
+    exact_sol: float = 0.0  # Exact solution energy
     output_dir: str = 'out/'
     n_samples: int = 1000
     n_iterations: int = 1000
@@ -244,7 +244,7 @@ class ModelRun():
             print(f'Running {self.config.model_type} Model: {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}, learning rate {self.config.learning_rate}')
 
         start = time.time()
-        out = str(self.config.output_dir) + f"{self.config.model_type}-it-{n_iterations}-sa-{self.config.n_samples}-sd-{self.config.seed}"
+        out = str(self.config.output_dir) + f"{self.config.model_type}-n-{self.config.hilbert.size}-it-{n_iterations}-sa-{self.config.n_samples}-sd-{self.config.seed}"
         print(f'Output directory: {out}')
         if self.config.model_type == "RBM" or self.config.model_type == "RBMSymm":
             out += f"-al-{self.config.alpha}"
