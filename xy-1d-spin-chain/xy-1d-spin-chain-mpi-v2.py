@@ -2,12 +2,11 @@ import jax
 import os
 
 outdir = 'out/'
-# TODO: Setup distributed JAX only on SLURM and setup the correct output directory
 if os.getenv('SLURM_JOB_ID') is not None:
     # This is a SLURM job, initialize distributed JAX
     jax.distributed.initialize()
     outdir = '/scratch/tcosgrov/out/'  # Change this to your desired output directory on SLURM
-    # Always print this to verify correct setup
+    # Print this to verify correct setup
     print(f"[{jax.process_index()}/{jax.process_count()}] devices:", jax.devices(), flush=True)
     print(f"[{jax.process_index()}/{jax.process_count()}] local devices:", jax.local_devices(), flush=True)
 
@@ -240,20 +239,20 @@ class ModelRun():
             raise ValueError("Driver must be set before running the model.")
         
         if self.config.model_type == "RBM" or self.config.model_type == "RBMSymm":
-            print(f'### Running {self.config.model_type} Model: {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}, alpha {self.config.alpha}')
+            print(f'Running {self.config.model_type} Model: {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}, alpha {self.config.alpha}')
         else:
-            print(f'### Running {self.config.model_type} Model: {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}')
-        
+            print(f'Running {self.config.model_type} Model: {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}')
+
         start = time.time()
         out = str(self.config.output_dir) + f"{self.config.model_type}-it-{n_iterations}-sa-{self.config.n_samples}-sd-{self.config.seed}"
-        print(f'### Output directory: {out}')
+        print(f'Output directory: {out}')
         if self.config.model_type == "RBM" or self.config.model_type == "RBMSymm":
             out += f"-al-{self.config.alpha}"
         self.driver.run(out=out, n_iter=n_iterations)
         end = time.time()
 
-        print(f'### {self.config.model_type} Model calculation finished')
-        print(f'### {self.config.model_type} Model Results')
+        print(f'{self.config.model_type} Model calculation finished')
+        print(f'{self.config.model_type} Model Results:')
         print('- Ground state energy approximation: ', self.driver.energy)
         if self.config.exact_sol != 0:
             error = jnp.abs((self.driver.energy.mean - self.config.exact_sol) / self.config.exact_sol)
@@ -263,108 +262,136 @@ class ModelRun():
         print('- Seconds to perform the calculation:', end - start)
         print()
 
-# Initialization parameters
-N = 10
-pbc = True # Periodic Boundary Conditions
-show_nk_graph = False # Show the NetKet graph
-print_hamiltonian = False # Print the Hamiltonian to dense format; useful for troubleshooting
-heisenberg_hamiltonian = False # Use the Heisenberg Hamiltonian instead of the XY Hamiltonian; useful for troubleshooting
-exact_gs_energy = -1.2732395447351628 * N # Set this to the exact ground state energy if known to avoid redoing the calculations
-ignore_warnings = True # Ignore specific warnings
+def main():
+    # These won't change during the run
+    pbc = True # Periodic Boundary Conditions
+    ignore_warnings = True # Ignore specific warnings
+    seed = random.randint(0, 2**32)  # Random seed for reproducibility
+    
+    # These will be iterated over
+    node_counts = jnp.array([10, 20, 40, 80, 160])
+    exact_gs_energy_multiple = -1.2732395447351628
+    samples = jnp.array([1000, 2000, 4000, 8000, 16000])
+    iterations = jnp.array([300, 600, 1200, 2400, 4800])
+    learning_rates = jnp.array([0.001, 0.01, 0.1, 1, 10])
+    alphas = jnp.array([0.1, 0.5, 1.0, 2.0, 5.0])
+    d_m = 1 # Maximum distance for the Metropolis sampler
+    
+    if ignore_warnings:
+        warnings.filterwarnings("ignore", category=UserWarning, module="netket")
 
-# Run parameters
-n_s = 1000
-n_i = 300
-# Ok, the Rngs is actually the random number generator seed for the parameters of the model.
-# https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/rnglib.html
-# This has been renammed as such
-#seed = 1 
-seed = random.randint(0, 2**32)  # Random seed for reproducibility
-print('### Random seed for rngs:', seed)
-d_m = 1
-l_r = 0.01
-alpha = 1.0  # RBM alpha
+    if len(learning_rates) != len(alphas):
+        raise ValueError("The number of learning rates must match the number of alphas.")
 
-if ignore_warnings:
-    warnings.filterwarnings("ignore", category=UserWarning, module="netket")
+    print('### 1D XY Spin Chain Calculations')
+    print('- Random seed for rngs:', seed)
+    print('- Periodic Boundary Conditions:', pbc)
+    print('- The analytical ground state * 4: U/N = -4/pi :', -4/jnp.pi)
+    print('- The analytical ground state (U/N): -1/pi = ', -1/jnp.pi)
+    print()
+    for N in node_counts:
+        for n_s in samples:
+            for n_i in iterations:
+                for i in range(len(learning_rates)): # pylint: disable=consider-using-enumerate
+                    l_r = learning_rates[i]
+                    alpha = alphas[i]
+                    N = int(N)
+                    exact_gs_energy = N * exact_gs_energy_multiple
+                    n_s = int(n_s)
+                    n_i = int(n_i)
+                    l_r = float(l_r)
+                    alpha = float(alpha)
+                    print(f'## Run Parameters: N={N}, Exact GS Energy={exact_gs_energy}, Samples={n_s}, Iterations={n_i}, Learning Rate={l_r}, Alpha={alpha}')
+                    g = nk.graph.Hypercube(length=N, n_dim=1, pbc=pbc)
+                    hi = nk.hilbert.Spin(s=0.5, total_sz=0, N=g.n_nodes)
+                    ha = sum([(sigmax(hi, i) * sigmax(hi, i+1 if i+1 < N else 0) + sigmay(hi, i) * sigmay(hi, i+1 if i+1 < N else 0)) for i in range(0,N)])
+                    if not pbc:
+                        ha = sum([(sigmax(hi, i) * sigmax(hi, i+1) + sigmay(hi, i) * sigmay(hi, i+1)) for i in range(0,N-1)])
 
-print('### 1D XY Spin Chain Calculation')
-print('### N: ', N)
+                    rbm_config = RunConfig(
+                        model_type="RBM",
+                        sampler_type="MetropolisExchange",
+                        optimizer_type="Sgd",
+                        preconditioner_type="SR",
+                        variational_state_type="MCState",
+                        driver_type="VMC",
+                        hilbert=hi,
+                        graph=g,
+                        hamiltonian=ha,
+                        exact_sol=exact_gs_energy,
+                        output_dir=outdir,
+                        n_samples=n_s,
+                        n_iterations=n_i,
+                        seed=seed,
+                        alpha=alpha,
+                        d_max=d_m,
+                        learning_rate=l_r
+                    )
+                    rbm_model_run = ModelRun(config=rbm_config)
+                    rbm_model_run.run()
 
-g = nk.graph.Hypercube(length=N, n_dim=1, pbc=pbc)
-if show_nk_graph:
-    print('### NetKet Graph')
-    print(g._sites)
-    print(g.adjacency_list())
-    print(g.n_edges)
-    print(g.n_nodes)
-    g.draw()
+                    jastrow_config = RunConfig(
+                        model_type="Jastrow",
+                        sampler_type="MetropolisExchange",
+                        optimizer_type="Sgd",
+                        preconditioner_type="SR",
+                        variational_state_type="MCState",
+                        driver_type="VMC",
+                        hilbert=hi,
+                        graph=g,
+                        hamiltonian=ha,
+                        exact_sol=exact_gs_energy,
+                        output_dir=outdir,
+                        n_samples=n_s,
+                        n_iterations=n_i,
+                        seed=seed,
+                        d_max=d_m,
+                        learning_rate=l_r
+                    )
+                    jastrow_model_run = ModelRun(config=jastrow_config)
+                    jastrow_model_run.run()
 
-hi = nk.hilbert.Spin(s=0.5, total_sz=0, N=g.n_nodes)
+                    ffn_config = RunConfig(
+                        model_type="FF",
+                        sampler_type="MetropolisExchange",
+                        optimizer_type="Sgd",
+                        preconditioner_type="SR",
+                        variational_state_type="MCState",
+                        driver_type="VMC",
+                        hilbert=hi,
+                        graph=g,
+                        hamiltonian=ha,
+                        exact_sol=exact_gs_energy,
+                        output_dir=outdir,
+                        n_samples=n_s,
+                        n_iterations=n_i,
+                        seed=seed,
+                        d_max=d_m,
+                        learning_rate=l_r
+                    )
+                    ffn_model_run = ModelRun(config=ffn_config)
+                    ffn_model_run.run()
 
-ha = sum([(sigmax(hi, i) * sigmax(hi, i+1 if i+1 < N else 0) + sigmay(hi, i) * sigmay(hi, i+1 if i+1 < N else 0)) for i in range(0,N)])
-if not pbc:
-    ha = sum([(sigmax(hi, i) * sigmax(hi, i+1) + sigmay(hi, i) * sigmay(hi, i+1)) for i in range(0,N-1)])
+                    ffn2_config = RunConfig(
+                        model_type="FF2",
+                        sampler_type="MetropolisExchange",
+                        optimizer_type="Sgd",
+                        preconditioner_type="SR",
+                        variational_state_type="MCState",
+                        driver_type="VMC",
+                        hilbert=hi,
+                        graph=g,
+                        hamiltonian=ha,
+                        exact_sol=exact_gs_energy,
+                        output_dir=outdir,
+                        n_samples=n_s,
+                        n_iterations=n_i,
+                        seed=seed,
+                        d_max=d_m,
+                        learning_rate=l_r
+                    )
+                    ffn2_model_run = ModelRun(config=ffn2_config)
+                    ffn2_model_run.run()
 
-if heisenberg_hamiltonian:
-    print('### Using the Heisenberg Hamiltonian')
-    ha = nk.operator.Heisenberg(hilbert=hi, graph=g)
-else:
-    print('### Using the XY Hamiltonian')
-
-if print_hamiltonian:
-    try:
-        print('### Hamiltonian:', ha.to_dense())
-    except Exception as e:
-        print('### Hamiltonian to_dense failed:', e)
-        print('### This is expected if the Hamiltonian is too large to fit in memory.')
-
-
-print('### Exact ground state energy')
-if not exact_gs_energy:
-    print('## Exact ground state energy calculation')
-    try:
-        evals = nk.exact.lanczos_ed(ha, compute_eigenvectors=False)
-        exact_gs_energy = evals[0]
-        print('N: ', N)
-        print('The nk.exact calculated ground state energy: ', exact_gs_energy)
-        print('The nk.exact / N calculated ground state: ', exact_gs_energy / N)
-    except Exception as e:
-        print('Exact ground state energy calculation failed:', e)
-        print('This is expected if the Hamiltonian is too large to fit in memory.')
-else:
-    print('Using the provided exact ground state energy:', exact_gs_energy)
-
-print('The analytical ground state * 4: U/N = -4/pi :', -4/jnp.pi)
-print('The analytical ground state (U/N): -1/pi = ', -1/jnp.pi)
-print()
-print('### These should be very close if not equal and are what we are looking for from the models')
-print('### Expected Ground State: ', exact_gs_energy)
-print('### Expected Ground State from Analytical Solution:', -4/jnp.pi * N)
-print()
-
-rbm_config = RunConfig(
-    model_type="RBM",
-    sampler_type="MetropolisExchange",
-    optimizer_type="Sgd",
-    preconditioner_type="SR",
-    variational_state_type="MCState",
-    driver_type="VMC",
-    hilbert=hi,
-    graph=g,
-    hamiltonian=ha,
-    exact_sol=exact_gs_energy,
-    # if running on Hopper, use the following output directory
-    output_dir=outdir,
-    # if running on a local machine, use the following output directory
-    #output_dir='out/',
-    n_samples=n_s,
-    n_iterations=n_i,
-    seed=seed,
-    alpha=alpha,
-    d_max=d_m,
-    learning_rate=l_r
-)
-
-rbm_model_run = ModelRun(config=rbm_config)
-rbm_model_run.run()
+if __name__ == "__main__":
+    main()
