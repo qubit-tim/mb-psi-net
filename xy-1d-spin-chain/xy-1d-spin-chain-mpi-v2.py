@@ -1,6 +1,12 @@
 import jax
-import json
-import os
+
+# Initialize distributed JAX (works automatically with SLURM)
+jax.distributed.initialize()
+
+# Always print this to verify correct setup
+print(f"[{jax.process_index()}/{jax.process_count()}] devices:", jax.devices(), flush=True)
+print(f"[{jax.process_index()}/{jax.process_count()}] local devices:", jax.local_devices(), flush=True)
+
 import time
 import warnings
 import random
