@@ -17,7 +17,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1                 # number of cores needed
 #SBATCH --gres=gpu:1g.10gb:1          # here you should insert the total number of gpus per node
-#SBATCH --mem-per-cpu=1G
+#SBATCH --mem-per-cpu=8G
 #SBATCH --array=1-5 # Array job with 5 tasks
 #SBATCH --hint=nomultithread  # Disable Hyperthreading
 
