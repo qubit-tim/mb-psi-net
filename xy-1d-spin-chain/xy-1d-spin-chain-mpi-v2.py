@@ -10,6 +10,8 @@ if os.getenv('SLURM_JOB_ID') is not None:
     print(f"[{jax.process_index()}/{jax.process_count()}] devices:", jax.devices(), flush=True)
     print(f"[{jax.process_index()}/{jax.process_count()}] local devices:", jax.local_devices(), flush=True)
 
+import argparse
+import json
 import time
 import warnings
 import random
@@ -21,6 +23,12 @@ import netket as nk
 from dataclasses import dataclass, field
 from flax import nnx
 from netket.operator.spin import sigmax, sigmay, sigmaz
+
+# Need to set the environment variable NETKET_EXPERIMENTAL_FFT_AUTOCORRELATION=1 for netket to use the FFT-based autocorrelation
+#os.environ['NETKET_EXPERIMENTAL_FFT_AUTOCORRELATION'] = '1'
+
+nk.config.netket_experimental_fft_autocorrelation = True  # Enable FFT-based autocorrelation
+print("Using FFT-based autocorrelation:", nk.config.netket_experimental_fft_autocorrelation)
 
 # The following classes are based on:
 #  https://netket.readthedocs.io/en/latest/tutorials/gs-heisenberg.html
@@ -124,6 +132,14 @@ class RunConfig:
     learning_rate: float = 0.01
     holomorphic: bool = False
     
+    def getOutFileBase(self):
+        out = str(self.output_dir) + f"{self.model_type}-n-{self.hilbert.size}-it-{self.n_iterations}-sa-{self.n_samples}-sd-{self.seed}"
+        if self.model_type == "RBM" or self.model_type == "RBMSymm":
+            out += f"-al-{self.alpha}"
+        else:
+            out += f"-lr-{self.learning_rate}"
+        return out
+    
     def __repr__(self):
         return (f"RunConfig(model_type={self.model_type}, sampler_type={self.sampler_type}, "
                 f"optimizer_type={self.optimizer_type}, preconditioner_type={self.preconditioner_type}, "
@@ -133,9 +149,58 @@ class RunConfig:
                 f"n_iterations={self.n_iterations}, seed={self.seed}, d_max={self.d_max}, "
                 f"learning_rate={self.learning_rate}, holomorphic={self.holomorphic})")
 
+@dataclass
+class GroundStateEnergy:
+    mean: float = None
+    estimate_error_of_mean: float = None
+    variance: float = None
+    tau_correlation: float = None  # τ correlation time
+    r_hat: float = None  # R̂ statistic for convergence
+
+@dataclass
+class ModelResults:
+    ground_state_energy: GroundStateEnergy = field(default_factory=GroundStateEnergy)
+    num_parameters: int = 0
+    seconds_to_calculate: float = 0.0
+    output_directory: str = ''
+    model_type: str = ''
+    hilbert_size: int = 0
+    num_iterations: int = 0
+    num_samples: int = 0
+    seed: int = 0
+    learning_rate: float = 0.0
+    alpha: float = 0.0
+    exact_solution_energy: float = 0.0
+    preconditioner_type: str = ''
+    sampler_type: str = ''
+    optimizer_type: str = ''
+    variational_state_type: str = ''
+    graph_type: str = ''
+    graph_nodes: int = 0
+    graph_edges: int = 0
+    
+    def toJSON(self):
+        return json.dumps(
+            self,
+            default=lambda o: o.__dict__,
+            sort_keys=True,
+            indent=4)
+    
+    def __repr__(self):
+        return (f"ModelResults(ground_state_energy={self.ground_state_energy}, num_parameters={self.num_parameters}, "
+                f"seconds_to_calculate={self.seconds_to_calculate}, output_directory={self.output_directory}, "
+                f"model_type={self.model_type}, hilbert_size={self.hilbert_size}, num_iterations={self.num_iterations}, "
+                f"num_samples={self.num_samples}, seed={self.seed}, learning_rate={self.learning_rate}, "
+                f"alpha={self.alpha}, exact_solution_energy={self.exact_solution_energy}, "
+                f"preconditioner_type={self.preconditioner_type}, sampler_type={self.sampler_type}, "
+                f"optimizer_type={self.optimizer_type}, variational_state_type={self.variational_state_type}, "
+                f"graph_type={self.graph_type}, graph_nodes={self.graph_nodes}, graph_edges={self.graph_edges})")
+
+
 class ModelRun():
     def __init__(self, config: RunConfig):
         self.config = config
+        self.results = ModelResults()
         self.model = self._setup_model()
         self.sampler = self._setup_sampler()
         self.optimizer = self._setup_optimizer()
@@ -239,17 +304,14 @@ class ModelRun():
             raise ValueError("Driver must be set before running the model.")
         
         if self.config.model_type == "RBM" or self.config.model_type == "RBMSymm":
-            print(f'Running {self.config.model_type} Model: {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}, alpha {self.config.alpha}')
+            print(f'Running {self.config.model_type} Model: {self.config.hilbert.size} nodes, {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}, alpha {self.config.alpha}')
         else:
-            print(f'Running {self.config.model_type} Model: {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}, learning rate {self.config.learning_rate}')
+            print(f'Running {self.config.model_type} Model: {self.config.hilbert.size} nodes, {n_iterations} iterations, {self.config.n_samples} samples, seed {self.config.seed}, learning rate {self.config.learning_rate}')
 
         start = time.time()
-        out = str(self.config.output_dir) + f"{self.config.model_type}-n-{self.config.hilbert.size}-it-{n_iterations}-sa-{self.config.n_samples}-sd-{self.config.seed}"
-        print(f'Output directory: {out}')
-        if self.config.model_type == "RBM" or self.config.model_type == "RBMSymm":
-            out += f"-al-{self.config.alpha}"
-        else:
-            out += f"-lr-{self.config.learning_rate}"
+        out = self.config.getOutFileBase()
+        
+        print(f'Output base name: {out}')
         
         self.driver.run(out=out, n_iter=n_iterations)
         end = time.time()
@@ -264,8 +326,43 @@ class ModelRun():
         print('- Number of Parameters: ', nk.jax.tree_size(self.variational_state.parameters))
         print('- Seconds to perform the calculation:', end - start)
         print()
+        # Store results
+        self.results.ground_state_energy.mean = float(self.driver.energy.mean.real)
+        self.results.ground_state_energy.estimate_error_of_mean = float(self.driver.energy.error_of_mean.real)
+        self.results.ground_state_energy.variance = float(self.driver.energy.variance.real)
+        self.results.ground_state_energy.tau_correlation = float(self.driver.energy.tau_corr.real)
+        self.results.ground_state_energy.r_hat = float(self.driver.energy.R_hat.real)
+        self.results.num_parameters = nk.jax.tree_size(self.variational_state.parameters)
+        self.results.seconds_to_calculate = end - start
+        self.results.output_directory = out
+        self.results.model_type = self.config.model_type
+        self.results.hilbert_size = self.config.hilbert.size
+        self.results.num_iterations = n_iterations
+        self.results.num_samples = self.config.n_samples
+        self.results.seed = self.config.seed
+        self.results.learning_rate = self.config.learning_rate
+        self.results.alpha = self.config.alpha
+        self.results.exact_solution_energy = self.config.exact_sol
+        self.results.preconditioner_type = self.config.preconditioner_type
+        self.results.sampler_type = self.config.sampler_type
+        self.results.optimizer_type = self.config.optimizer_type
+        self.results.variational_state_type = self.config.variational_state_type
+        self.results.graph_type = type(self.config.graph).__name__
+        self.results.graph_nodes = self.config.graph.n_nodes
+        self.results.graph_edges = self.config.graph.n_edges
+        print(self.results.toJSON())
+        print()
+        self.write_results()
+    
+    def write_results(self, filename: str = None):
+        if filename is None:
+            filename = self.config.getOutFileBase() + '-results.json'
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.writelines(self.results.toJSON())
+        print(f'Results written to {filename}')
 
-def main():
+def main(args):
+    print(args)
     # These won't change during the run
     pbc = True # Periodic Boundary Conditions
     ignore_warnings = True # Ignore specific warnings
@@ -276,9 +373,18 @@ def main():
     exact_gs_energy_multiple = -1.2732395447351628
     samples = jnp.array([1000, 2000, 4000, 8000, 16000])
     iterations = jnp.array([300, 600, 1200, 2400, 4800, 9600])
-    learning_rates = jnp.array([0.001, 0.01, 0.1, 1, 10])
-    alphas = jnp.array([0.1, 0.5, 1.0, 2.0, 5.0])
+    learning_rates = jnp.array([0.0001, 0.001, 0.01, 0.1, 1, 10])
+    alphas = jnp.array([0.1, 0.5, 1.0, 2.0, 5.0, 10.0])
     d_m = 1 # Maximum distance for the Metropolis sampler
+    
+    # We are running locally, so let's do fewer iterations
+    if os.getenv('SLURM_JOB_ID') is None:
+        node_counts = jnp.array([10])
+        exact_gs_energy_multiple = -1.2732395447351628
+        samples = jnp.array([1000])
+        iterations = jnp.array([600])
+        learning_rates = jnp.array([0.001])
+        alphas = jnp.array([1.0])
     
     if ignore_warnings:
         warnings.filterwarnings("ignore", category=UserWarning, module="netket")
@@ -310,7 +416,7 @@ def main():
                     ha = sum([(sigmax(hi, i) * sigmax(hi, i+1 if i+1 < N else 0) + sigmay(hi, i) * sigmay(hi, i+1 if i+1 < N else 0)) for i in range(0,N)])
                     if not pbc:
                         ha = sum([(sigmax(hi, i) * sigmax(hi, i+1) + sigmay(hi, i) * sigmay(hi, i+1)) for i in range(0,N-1)])
-
+                        
                     rbm_config = RunConfig(
                         model_type="RBM",
                         sampler_type="MetropolisExchange",
@@ -330,9 +436,7 @@ def main():
                         d_max=d_m,
                         learning_rate=l_r
                     )
-                    rbm_model_run = ModelRun(config=rbm_config)
-                    rbm_model_run.run()
-
+                    
                     jastrow_config = RunConfig(
                         model_type="Jastrow",
                         sampler_type="MetropolisExchange",
@@ -351,9 +455,7 @@ def main():
                         d_max=d_m,
                         learning_rate=l_r
                     )
-                    jastrow_model_run = ModelRun(config=jastrow_config)
-                    jastrow_model_run.run()
-
+                    
                     ffn_config = RunConfig(
                         model_type="FF",
                         sampler_type="MetropolisExchange",
@@ -372,9 +474,7 @@ def main():
                         d_max=d_m,
                         learning_rate=l_r
                     )
-                    ffn_model_run = ModelRun(config=ffn_config)
-                    ffn_model_run.run()
-
+                    
                     ffn2_config = RunConfig(
                         model_type="FF2",
                         sampler_type="MetropolisExchange",
@@ -393,8 +493,35 @@ def main():
                         d_max=d_m,
                         learning_rate=l_r
                     )
-                    ffn2_model_run = ModelRun(config=ffn2_config)
-                    ffn2_model_run.run()
+                    
+                    match args.model:
+                        case "RBM":
+                            ModelRun(config=rbm_config).run()
+                        case "RBMSymm":
+                            print("RBMSymm model is not implemented yet.")
+                        case "Jastrow":
+                            ModelRun(config=jastrow_config).run()
+                        case "FF":
+                            ModelRun(config=ffn_config).run()
+                        case "FF2":
+                            ModelRun(config=ffn2_config).run()
+                        case _:
+                            print(f"Model type '{args.model}' is not recognized. Defaulting to all models.")
+                            ModelRun(config=rbm_config).run()
+                            ModelRun(config=jastrow_config).run()
+                            ModelRun(config=ffn_config).run()
+                            ModelRun(config=ffn2_config).run()
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="XY 1D Spin Chain Script.")
+
+    # Positional arguments - these are required
+    #parser.add_argument("model", type=str, help="The name of the model to use.")
+
+    # Optional arguments '--model'
+    parser.add_argument("--model", type=str, help="The name of the model to use.")
+
+    # 3. Parse arguments
+    args = parser.parse_args()
+
+    main(args)

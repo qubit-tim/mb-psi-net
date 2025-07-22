@@ -1,3 +1,6 @@
+# Output files and directories to ignore
+out/
+
 # macOS-specific excludes
 .DS_Store
 
