@@ -364,33 +364,32 @@ class ModelRun():
 def main(args):
     print(args)
     # These won't change during the run
-    pbc = True # Periodic Boundary Conditions
-    ignore_warnings = True # Ignore specific warnings
-    seed = random.randint(0, 2**32)  # Random seed for reproducibility
+    model = args.model  # Model type to use
+    pbc = args.pbc # Periodic Boundary Conditions
+    seed = args.seed  # Random seed for reproducibility
+    if seed < 0:
+        seed = random.randint(0, 2**32)
+    N = args.nodes  # Number of nodes in the spin chain
+    exact_gs_energy = -1.2732395447351628 * N  # Exact ground state energy for the 1D XY spin chain
+    n_s = args.samples  # Number of samples to use
+    n_i = args.iterations  # Number of iterations to run
+    l_r = args.learning_rate  # Learning rate for the optimizer
+    alpha = args.alpha  # Alpha parameter for the RBM model
+    d_m = args.d_max # Maximum distance for the Metropolis sampler
     
-    # These will be iterated over
-    node_counts = jnp.array([10, 20, 40, 80, 160])
-    exact_gs_energy_multiple = -1.2732395447351628
-    samples = jnp.array([1000, 2000, 4000, 8000, 16000])
-    iterations = jnp.array([300, 600, 1200, 2400, 4800, 9600])
-    learning_rates = jnp.array([0.0001, 0.001, 0.01, 0.1, 1, 10])
-    alphas = jnp.array([0.1, 0.5, 1.0, 2.0, 5.0, 10.0])
-    d_m = 1 # Maximum distance for the Metropolis sampler
-    
-    # We are running locally, so let's do fewer iterations
+    # We are running locally, so let's use some default values
     if os.getenv('SLURM_JOB_ID') is None:
-        node_counts = jnp.array([10])
-        exact_gs_energy_multiple = -1.2732395447351628
-        samples = jnp.array([1000])
-        iterations = jnp.array([600])
-        learning_rates = jnp.array([0.001])
-        alphas = jnp.array([1.0])
-    
-    if ignore_warnings:
-        warnings.filterwarnings("ignore", category=UserWarning, module="netket")
+        model = model if model != None else "RBM" # Change this to the model you want to test locally
+        pbc = True
+        N = 10
+        exact_gs_energy = -1.2732395447351628 * N
+        n_s = 1000
+        n_i = 600
+        l_r = 0.001
+        alpha = 1.0
 
-    if len(learning_rates) != len(alphas):
-        raise ValueError("The number of learning rates must match the number of alphas.")
+    if args.ignore_warnings:
+        warnings.filterwarnings("ignore", category=UserWarning, module="netket")
 
     print('### 1D XY Spin Chain Calculations')
     print('- Random seed for rngs:', seed)
@@ -398,119 +397,35 @@ def main(args):
     print('- The analytical ground state * 4: U/N = -4/pi :', -4/jnp.pi)
     print('- The analytical ground state (U/N): -1/pi = ', -1/jnp.pi)
     print()
-    for N in node_counts:
-        for n_s in samples:
-            for n_i in iterations:
-                for i in range(len(learning_rates)): # pylint: disable=consider-using-enumerate
-                    l_r = learning_rates[i]
-                    alpha = alphas[i]
-                    N = int(N)
-                    exact_gs_energy = N * exact_gs_energy_multiple
-                    n_s = int(n_s)
-                    n_i = int(n_i)
-                    l_r = float(l_r)
-                    alpha = float(alpha)
-                    print(f'## Run Parameters: N={N}, Exact GS Energy={exact_gs_energy}, Samples={n_s}, Iterations={n_i}, Learning Rate={l_r}, Alpha={alpha}')
-                    g = nk.graph.Hypercube(length=N, n_dim=1, pbc=pbc)
-                    hi = nk.hilbert.Spin(s=0.5, total_sz=0, N=g.n_nodes)
-                    ha = sum([(sigmax(hi, i) * sigmax(hi, i+1 if i+1 < N else 0) + sigmay(hi, i) * sigmay(hi, i+1 if i+1 < N else 0)) for i in range(0,N)])
-                    if not pbc:
-                        ha = sum([(sigmax(hi, i) * sigmax(hi, i+1) + sigmay(hi, i) * sigmay(hi, i+1)) for i in range(0,N-1)])
+    
+    print(f'## Run Parameters: N={N}, Exact GS Energy={exact_gs_energy}, Samples={n_s}, Iterations={n_i}, Learning Rate={l_r}, Alpha={alpha}')
+    g = nk.graph.Hypercube(length=N, n_dim=1, pbc=pbc)
+    hi = nk.hilbert.Spin(s=0.5, total_sz=0, N=g.n_nodes)
+    ha = sum([(sigmax(hi, i) * sigmax(hi, i+1 if i+1 < N else 0) + sigmay(hi, i) * sigmay(hi, i+1 if i+1 < N else 0)) for i in range(0,N)])
+    if not pbc:
+        ha = sum([(sigmax(hi, i) * sigmax(hi, i+1) + sigmay(hi, i) * sigmay(hi, i+1)) for i in range(0,N-1)])
                         
-                    rbm_config = RunConfig(
-                        model_type="RBM",
-                        sampler_type="MetropolisExchange",
-                        optimizer_type="Sgd",
-                        preconditioner_type="SR",
-                        variational_state_type="MCState",
-                        driver_type="VMC",
-                        hilbert=hi,
-                        graph=g,
-                        hamiltonian=ha,
-                        exact_sol=exact_gs_energy,
-                        output_dir=outdir,
-                        n_samples=n_s,
-                        n_iterations=n_i,
-                        seed=seed,
-                        alpha=alpha,
-                        d_max=d_m,
-                        learning_rate=l_r
-                    )
-                    
-                    jastrow_config = RunConfig(
-                        model_type="Jastrow",
-                        sampler_type="MetropolisExchange",
-                        optimizer_type="Sgd",
-                        preconditioner_type="SR",
-                        variational_state_type="MCState",
-                        driver_type="VMC",
-                        hilbert=hi,
-                        graph=g,
-                        hamiltonian=ha,
-                        exact_sol=exact_gs_energy,
-                        output_dir=outdir,
-                        n_samples=n_s,
-                        n_iterations=n_i,
-                        seed=seed,
-                        d_max=d_m,
-                        learning_rate=l_r
-                    )
-                    
-                    ffn_config = RunConfig(
-                        model_type="FF",
-                        sampler_type="MetropolisExchange",
-                        optimizer_type="Sgd",
-                        preconditioner_type="SR",
-                        variational_state_type="MCState",
-                        driver_type="VMC",
-                        hilbert=hi,
-                        graph=g,
-                        hamiltonian=ha,
-                        exact_sol=exact_gs_energy,
-                        output_dir=outdir,
-                        n_samples=n_s,
-                        n_iterations=n_i,
-                        seed=seed,
-                        d_max=d_m,
-                        learning_rate=l_r
-                    )
-                    
-                    ffn2_config = RunConfig(
-                        model_type="FF2",
-                        sampler_type="MetropolisExchange",
-                        optimizer_type="Sgd",
-                        preconditioner_type="SR",
-                        variational_state_type="MCState",
-                        driver_type="VMC",
-                        hilbert=hi,
-                        graph=g,
-                        hamiltonian=ha,
-                        exact_sol=exact_gs_energy,
-                        output_dir=outdir,
-                        n_samples=n_s,
-                        n_iterations=n_i,
-                        seed=seed,
-                        d_max=d_m,
-                        learning_rate=l_r
-                    )
-                    
-                    match args.model:
-                        case "RBM":
-                            ModelRun(config=rbm_config).run()
-                        case "RBMSymm":
-                            print("RBMSymm model is not implemented yet.")
-                        case "Jastrow":
-                            ModelRun(config=jastrow_config).run()
-                        case "FF":
-                            ModelRun(config=ffn_config).run()
-                        case "FF2":
-                            ModelRun(config=ffn2_config).run()
-                        case _:
-                            print(f"Model type '{args.model}' is not recognized. Defaulting to all models.")
-                            ModelRun(config=rbm_config).run()
-                            ModelRun(config=jastrow_config).run()
-                            ModelRun(config=ffn_config).run()
-                            ModelRun(config=ffn2_config).run()
+    run_config = RunConfig(
+        model_type=model,
+        sampler_type="MetropolisExchange",
+        optimizer_type="Sgd",
+        preconditioner_type="SR",
+        variational_state_type="MCState",
+        driver_type="VMC",
+        hilbert=hi,
+        graph=g,
+        hamiltonian=ha,
+        exact_sol=exact_gs_energy,
+        output_dir=outdir,
+        n_samples=n_s,
+        n_iterations=n_i,
+        seed=seed,
+        alpha=alpha,
+        d_max=d_m,
+        learning_rate=l_r
+    )
+
+    ModelRun(config=run_config).run()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="XY 1D Spin Chain Script.")
@@ -525,9 +440,9 @@ if __name__ == "__main__":
     parser.add_argument("--iterations", type=int, default=600, help="Number of iterations to run.")
     parser.add_argument("--learning_rate", type=float, default=0.001, help="Learning rate for the optimizer.")
     parser.add_argument("--alpha", type=float, default=1.0, help="Alpha parameter for the RBM model.")
-    parser.add_argument("--seed", type=int, default=0, help="Random seed for reproducibility.")
+    parser.add_argument("--seed", type=int, default=-1, help="Random seed for reproducibility.")
     parser.add_argument("--d_max", type=int, default=1, help="Maximum distance for the Metropolis sampler.")
     parser.add_argument("--pbc", type=bool, default=True, help="Use periodic boundary conditions.")
-    parser.add_argument("--ignore_warnings", action='store_true', help="Ignore specific warnings.")
+    parser.add_argument("--ignore_warnings", type=bool, default=True, help="Ignore specific warnings.")
 
     main(parser.parse_args())
