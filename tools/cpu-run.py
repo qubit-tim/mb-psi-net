@@ -45,6 +45,11 @@ if __name__ == "__main__":
         'python_script': '/home/tcosgrov/code/mb-psi-net/xy-1d-spin-chain/xy-1d-spin-chain-mpi-v3.py',
         'python_args': args,
     }
-
-    rendered_script = template.render(context)
-    print(rendered_script)
+    
+    job_file = '~/cpu-run.slurm'
+    with open(job_file, 'w') as fh:
+        rendered_script = template.render(context)
+        fh.write(rendered_script)
+        print(rendered_script)
+        print(f"Job script written to {job_file}")
+    
