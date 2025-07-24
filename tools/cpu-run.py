@@ -42,7 +42,7 @@ if __name__ == "__main__":
         'modules': ['gnu/12.3.0', 'python/3.12.1-33'],
         'venv_source': '/home/tcosgrov/code/mb-psi-net/.venv/bin/activate',
         'exports': ['NETKET_EXPERIMENTAL_SHARDING=0'],
-        'python_script': '/home/tcosgrov/code/mb-psi-net/xy-1d-spin-chain/xy-1d-spin-chain-mpi-v2.py',
+        'python_script': '/home/tcosgrov/code/mb-psi-net/xy-1d-spin-chain/xy-1d-spin-chain-mpi-v3.py',
         'python_args': args,
     }
 
