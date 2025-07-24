@@ -4,7 +4,7 @@ import os
 outdir = 'out/'
 if os.getenv('SLURM_JOB_ID') is not None:
     # This is a SLURM job, initialize distributed JAX
-    jax.distributed.initialize()
+    #jax.distributed.initialize()
     outdir = '/scratch/tcosgrov/out/'  # Change this to your desired output directory on SLURM
     # Print this to verify correct setup
     print(f"[{jax.process_index()}/{jax.process_count()}] devices:", jax.devices(), flush=True)

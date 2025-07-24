@@ -22,9 +22,9 @@ if __name__ == "__main__":
     model = 'RBM'
     nodes = 10
     samples = 1000
-    iterations = 10000
-    learning_rate = 0.01
-    alpha = 0.5
+    iterations = 600
+    learning_rate = 0.001
+    alpha = 1.0
     seed = 42
     args = f'--model {model} --nodes {nodes} --samples {samples} --iterations {iterations} --learning-rate {learning_rate} --alpha {alpha} --seed {seed}'
     context = {
