@@ -1,0 +1,49 @@
+#!/bin/sh
+
+#SBATCH --job-name={{ job_name }}
+#SBATCH --partition={{ partition }}
+
+# Output and error files
+#SBATCH --output={{ output_file }}  # Output file
+#SBATCH --error={{ error_file }}   # Error file
+
+## Email notifications
+#SBATCH --mail-type={{ mail_type }}
+#SBATCH --mail-user={{ mail_user }}
+
+{% if time -%}
+## Run time limit
+#SBATCH --time={{ time }}
+{%- endif %}
+
+## Resource Allocations
+{% if nodes -%}
+#SBATCH --nodes={{ nodes }}
+{%- endif -%}
+#SBATCH --cpus-per-task={{ cpus_per_task }}
+#SBATCH --mem-per-cpu={{ mem_per_cpu }}
+{% if array -%}
+#SBATCH --array={{ array }}
+{%- endif %}
+set echo
+umask 0027
+
+## Load the relevant modules needed for the job
+{% for module in modules -%}
+module load {{ module }}
+{% endfor %}
+## Source the venv
+source {{ venv_source }}
+
+## Export environment variables
+{% for export in exports -%}
+export {{ export }}
+{%- endfor %}
+{% if array %}
+srun -uv python {{ python_script }} {{ python_args }}
+{% else %}
+python {{ python_script }} {{ python_args }}
+{% endif %}
+
+{% if array %}
+{% endif %}

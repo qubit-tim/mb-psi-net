@@ -1,0 +1,15 @@
+job_name
+partition
+output_file
+error_file
+mail_type
+mail_use
+time
+
+modules[]
+
+venv_source
+
+exports[]
+
+python_script
