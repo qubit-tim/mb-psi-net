@@ -52,5 +52,8 @@ if __name__ == "__main__":
         rendered_script = template.render(context)
         fh.write(rendered_script)
         print(rendered_script)
-        print(f"Job script written to {job_file}")
-    
+        print(f'Job script written to {job_file}')
+
+    os.system(f'sbatch {job_file}')
+    print(f'Job submitted with sbatch {job_file}')
+    print(f'Use `squeue -u $USER` to check job status')
