@@ -1,3 +1,4 @@
+import os
 import random
 
 from jinja2 import Environment, FileSystemLoader
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     }
     
     job_file = '~/cpu-run.slurm'
-    with open(job_file, 'w') as fh:
+    with open(os.path.expanduser(job_file), 'w') as fh:
         rendered_script = template.render(context)
         fh.write(rendered_script)
         print(rendered_script)
