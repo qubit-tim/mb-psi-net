@@ -11,9 +11,9 @@
 #SBATCH --mail-type={{ mail_type }}
 #SBATCH --mail-user={{ mail_user }}
 
-{% if time -%}
+{% if run_limit -%}
 ## Run time limit
-#SBATCH --time={{ time }}
+#SBATCH --time={{ run_limit }}
 {%- endif %}
 
 ## Resource Allocations
