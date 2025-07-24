@@ -20,40 +20,41 @@ if __name__ == "__main__":
     learning_rates = [0.0001, 0.001, 0.01, 0.1, 1, 10]
     alphas = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
     
-    model = 'RBM'
+    #model = 'RBM'
     nodes = 10
     samples = 1000
     iterations = 600
     learning_rate = 0.001
     alpha = 1.0
     seed = 42
-    args = f'--model {model} --nodes {nodes} --samples {samples} --iterations {iterations} --learning-rate {learning_rate} --alpha {alpha} --seed {seed}'
-    context = {
-        'job_name': 'netket-xy-1d-spin-chain',
-        'partition': 'normal',
-        'output_file': '/scratch/%u/%x-%N-%j.out',
-        'error_file': '/scratch/%u/%x-%N-%j.err',
-        'mail_type': 'NONE',
-        'mail_user': 'tcosgrov@gmu.edu',
-        'time': '0-01:00',
-        #'nodes': 1,
-        'cpus_per_task': 1,
-        'mem_per_cpu': '4G',
-        #'array': '1-10',
-        'modules': ['gnu/12.3.0', 'python/3.12.1-33'],
-        'venv_source': '/home/tcosgrov/code/mb-psi-net/.venv/bin/activate',
-        'exports': ['NETKET_EXPERIMENTAL_SHARDING=0'],
-        'python_script': '/home/tcosgrov/code/mb-psi-net/xy-1d-spin-chain/xy-1d-spin-chain-mpi-v3.py',
-        'python_args': args,
-    }
-    
-    job_file = '~/cpu-run.slurm'
-    with open(os.path.expanduser(job_file), 'w') as fh:
-        rendered_script = template.render(context)
-        fh.write(rendered_script)
-        print(rendered_script)
-        print(f'Job script written to {job_file}')
+    for model in models:
+        args = f'--model {model} --nodes {nodes} --samples {samples} --iterations {iterations} --learning-rate {learning_rate} --alpha {alpha} --seed {seed}'
+        context = {
+            'job_name': 'netket-xy-1d-spin-chain',
+            'partition': 'normal',
+            'output_file': '/scratch/%u/%x-%N-%j.out',
+            'error_file': '/scratch/%u/%x-%N-%j.err',
+            'mail_type': 'NONE',
+            'mail_user': 'tcosgrov@gmu.edu',
+            'time': '0-01:00',
+            #'nodes': 1,
+            'cpus_per_task': 1,
+            'mem_per_cpu': '4G',
+            #'array': '1-10',
+            'modules': ['gnu/12.3.0', 'python/3.12.1-33'],
+            'venv_source': '/home/tcosgrov/code/mb-psi-net/.venv/bin/activate',
+            'exports': ['NETKET_EXPERIMENTAL_SHARDING=0'],
+            'python_script': '/home/tcosgrov/code/mb-psi-net/xy-1d-spin-chain/xy-1d-spin-chain-mpi-v3.py',
+            'python_args': args,
+        }
+        
+        job_file = '~/cpu-run.slurm'
+        with open(os.path.expanduser(job_file), 'w') as fh:
+            rendered_script = template.render(context)
+            fh.write(rendered_script)
+            print(rendered_script)
+            print(f'Job script written to {job_file}')
 
-    os.system(f'sbatch {job_file}')
-    print(f'Job submitted with sbatch {job_file}')
-    print(f'Use `squeue -u $USER` to check job status')
+        os.system(f'sbatch {job_file}')
+        print(f'Job submitted with sbatch {job_file}')
+        print(f'Use `squeue -u $USER` to check job status')
