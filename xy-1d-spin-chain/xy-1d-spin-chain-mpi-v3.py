@@ -438,10 +438,10 @@ if __name__ == "__main__":
     parser.add_argument("--nodes", type=int, default=10, help="Number of nodes in the spin chain.")
     parser.add_argument("--samples", type=int, default=1000, help="Number of samples to use.")
     parser.add_argument("--iterations", type=int, default=600, help="Number of iterations to run.")
-    parser.add_argument("--learning_rate", type=float, default=0.001, help="Learning rate for the optimizer.")
+    parser.add_argument("--learning-rate", type=float, default=0.001, help="Learning rate for the optimizer.")
     parser.add_argument("--alpha", type=float, default=1.0, help="Alpha parameter for the RBM model.")
     parser.add_argument("--seed", type=int, default=-1, help="Random seed for reproducibility.")
-    parser.add_argument("--d_max", type=int, default=1, help="Maximum distance for the Metropolis sampler.")
+    parser.add_argument("--d-max", type=int, default=1, help="Maximum distance for the Metropolis sampler.")
     parser.add_argument("--pbc", type=bool, default=True, help="Use periodic boundary conditions.")
     parser.add_argument("--ignore_warnings", type=bool, default=True, help="Ignore specific warnings.")
 
