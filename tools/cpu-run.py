@@ -17,9 +17,9 @@ class JobConfig:
     time: str
     cpus_per_task: int = 1
     mem_per_cpu: str = '4G'
-    modules: list = ['gnu/12.3.0', 'python/3.12.1-33']
+    modules: list = field(default_factory=lambda: ['gnu/12.3.0', 'python/3.12.1-33'])
     venv_source: str
-    exports: list
+    exports: list = field(default_factory=list)
     python_script: str
     python_args: str
 
