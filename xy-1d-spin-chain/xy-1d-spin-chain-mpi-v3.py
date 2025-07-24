@@ -196,7 +196,6 @@ class ModelResults:
                 f"optimizer_type={self.optimizer_type}, variational_state_type={self.variational_state_type}, "
                 f"graph_type={self.graph_type}, graph_nodes={self.graph_nodes}, graph_edges={self.graph_edges})")
 
-
 class ModelRun():
     def __init__(self, config: RunConfig):
         self.config = config
@@ -361,7 +360,23 @@ class ModelRun():
             f.writelines(self.results.toJSON())
         print(f'Results written to {filename}')
 
-def main(args):
+def main():
+    parser = argparse.ArgumentParser(description="XY 1D Spin Chain Script.")
+    # Positional arguments - these are required
+    #parser.add_argument("model", type=str, help="The name of the model to use.")
+
+    # Optional arguments
+    parser.add_argument("--model", type=str, help="The name of the model to use.")
+    parser.add_argument("--nodes", type=int, default=10, help="Number of nodes in the spin chain.")
+    parser.add_argument("--samples", type=int, default=1000, help="Number of samples to use.")
+    parser.add_argument("--iterations", type=int, default=600, help="Number of iterations to run.")
+    parser.add_argument("--learning-rate", type=float, default=0.001, help="Learning rate for the optimizer.")
+    parser.add_argument("--alpha", type=float, default=1.0, help="Alpha parameter for the RBM model.")
+    parser.add_argument("--seed", type=int, default=-1, help="Random seed for reproducibility.")
+    parser.add_argument("--d-max", type=int, default=1, help="Maximum distance for the Metropolis sampler.")
+    parser.add_argument("--pbc", type=bool, default=True, help="Use periodic boundary conditions.")
+    parser.add_argument("--ignore_warnings", type=bool, default=True, help="Ignore specific warnings.")
+    args = parser.parse_args()
     print(args)
     # These won't change during the run
     model = args.model  # Model type to use
@@ -428,21 +443,4 @@ def main(args):
     ModelRun(config=run_config).run()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="XY 1D Spin Chain Script.")
-
-    # Positional arguments - these are required
-    #parser.add_argument("model", type=str, help="The name of the model to use.")
-
-    # Optional arguments
-    parser.add_argument("--model", type=str, help="The name of the model to use.")
-    parser.add_argument("--nodes", type=int, default=10, help="Number of nodes in the spin chain.")
-    parser.add_argument("--samples", type=int, default=1000, help="Number of samples to use.")
-    parser.add_argument("--iterations", type=int, default=600, help="Number of iterations to run.")
-    parser.add_argument("--learning-rate", type=float, default=0.001, help="Learning rate for the optimizer.")
-    parser.add_argument("--alpha", type=float, default=1.0, help="Alpha parameter for the RBM model.")
-    parser.add_argument("--seed", type=int, default=-1, help="Random seed for reproducibility.")
-    parser.add_argument("--d-max", type=int, default=1, help="Maximum distance for the Metropolis sampler.")
-    parser.add_argument("--pbc", type=bool, default=True, help="Use periodic boundary conditions.")
-    parser.add_argument("--ignore_warnings", type=bool, default=True, help="Ignore specific warnings.")
-
-    main(parser.parse_args())
+    main()

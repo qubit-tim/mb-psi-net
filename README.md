@@ -17,6 +17,8 @@ pip install -r requirements.txt --upgrade
     1. -v adds detailed stats
 1. squeue -u $USER - 
 1. sreport cluster utilization -T 'ALL'
+1. sinfo -N -o "%N %c" | grep hop | sort -u | awk -F' ' '{sum += $2} END {print sum}'
+    1. This will show available CPU cores (I think)
 
 TODO: Find a command to view available CPU nodes / cores
 

@@ -1,3 +1,4 @@
+import argparse
 import itertools
 import os
 import platform
@@ -58,7 +59,12 @@ def sleep():
     print("Finished sleeping.")
 
 def main():
-    seed_count = 1
+    parser = argparse.ArgumentParser(description="Submit jobs to the cluster")
+    parser.add_argument("--seed-count", type=int, default=1, help="Number of random seeds to use.")
+    main_args = parser.parse_args()
+    seed_count = main_args.seed_count
+    if seed_count < 1:
+        raise ValueError("Seed count must be at least 1.")
     seeds = [random.randint(0, 2**32) for _ in range(seed_count)]
 
     # These will be iterated over
@@ -98,7 +104,6 @@ def main():
             args = f'--model {model} --nodes {nodes} --samples {samples} --iterations {iterations} --learning-rate {learning_rate} --seed {seed}'
             cfg.python_args = args
             run_job(cfg)
-
 
 if __name__ == "__main__":
     main()
