@@ -50,28 +50,26 @@ def run_job(config: JobConfig):
 
 def sleep():
     """
-    Sleep for a random duration between 0.1 and 0.5 seconds.
+    Sleep for a random duration between 0.5 and 0.8 seconds.
     """
-    sleep_duration = random.uniform(0.1, 0.5)
+    sleep_duration = random.uniform(0.5, 0.8)
     print(f"Sleeping for {sleep_duration:.3f} seconds...")
     time.sleep(sleep_duration)
     print("Finished sleeping.")
 
 def main():
-    # Example context for rendering the template
-    seed = random.randint(0, 2**32)  # Random seed for reproducibility
-    
+    seed_count = 1
+    seeds = [random.randint(0, 2**32) for _ in range(seed_count)]
+
     # These will be iterated over
     alpha_models = ['RBM']
     learning_rate_models = ['Jastrow', 'FF', 'FF2']
-    node_counts = [10, 20] #, 40, 80, 160]
-    samples_list = [1000] #, 2000, 4000, 8000, 16000]
-    iterations_list = [300] #, 600, 1200, 2400, 4800, 9600]
-    #learning_rates = [0.0001, 0.001, 0.01, 0.1, 1, 10]
-    learning_rates = [0.001]
-    #alphas = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
-    alphas = [1.0]
-    seed = 42
+    #node_counts = [10, 20, 40, 80, 160] -> if I want to see if more nodes == more accurate results
+    node_counts = [10, 20]
+    samples_list = [1000, 2000, 4000, 8000, 16000]
+    iterations_list = [300, 600, 1200, 2400, 4800, 9600]
+    learning_rates = [0.0001, 0.001, 0.01, 0.1, 1, 10]
+    alphas = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
     cfg = JobConfig(
             job_name='netket-xy-1d-spin-chain',
             partition='normal',
@@ -88,17 +86,18 @@ def main():
             python_script='/home/tcosgrov/code/mb-psi-net/xy-1d-spin-chain/xy-1d-spin-chain-mpi-v3.py',
         )
 
-    for combo in itertools.product(alpha_models, node_counts, samples_list, iterations_list, alphas):
-        model, nodes, samples, iterations, alpha = combo
-        args = f'--model {model} --nodes {nodes} --samples {samples} --iterations {iterations} --alpha {alpha} --seed {seed}'
-        cfg.python_args = args
-        run_job(cfg)
+    for seed in seeds:
+        for combo in itertools.product(alpha_models, node_counts, samples_list, iterations_list, alphas):
+            model, nodes, samples, iterations, alpha = combo
+            args = f'--model {model} --nodes {nodes} --samples {samples} --iterations {iterations} --alpha {alpha} --seed {seed}'
+            cfg.python_args = args
+            run_job(cfg)
 
-    for combo in itertools.product(learning_rate_models, node_counts, samples_list, iterations_list, learning_rates):
-        model, nodes, samples, iterations, learning_rate = combo
-        args = f'--model {model} --nodes {nodes} --samples {samples} --iterations {iterations} --learning-rate {learning_rate} --seed {seed}'
-        cfg.python_args = args
-        run_job(cfg)
+        for combo in itertools.product(learning_rate_models, node_counts, samples_list, iterations_list, learning_rates):
+            model, nodes, samples, iterations, learning_rate = combo
+            args = f'--model {model} --nodes {nodes} --samples {samples} --iterations {iterations} --learning-rate {learning_rate} --seed {seed}'
+            cfg.python_args = args
+            run_job(cfg)
 
 
 if __name__ == "__main__":
