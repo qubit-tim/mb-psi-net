@@ -67,7 +67,7 @@ def main():
     parser.add_argument("--run-sleep", type=bool, default=False, help="Enable sleep between job submissions.")
     main_args = parser.parse_args()
     seed_count = main_args.seed_count
-    global enable_run_sleep
+    global enable_run_sleep # pylint:disable=global-statement
     # Set the global variable for sleep based on command line argument
     enable_run_sleep = main_args.run_sleep
     if seed_count < 1:
@@ -90,7 +90,7 @@ def main():
             error_file='/scratch/%u/%x-%N-%j.err',
             mail_type='NONE',
             mail_user='tcosgrov@gmu.edu',
-            run_limit='0-01:00',
+            run_limit='3-00:00',
             cpus_per_task=1,
             mem_per_cpu='4G',
             modules=['gnu/12.3.0', 'python/3.12.1-33'],
