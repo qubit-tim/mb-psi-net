@@ -8,6 +8,8 @@ import time
 from dataclasses import dataclass, field
 from jinja2 import Environment, FileSystemLoader
 
+enable_run_sleep = True
+
 @dataclass
 class JobConfig:
     job_name: str = None
@@ -24,7 +26,6 @@ class JobConfig:
     exports: list = field(default_factory=list)
     python_script: str = None
     python_args: str = None
-
 
 env = Environment(loader=FileSystemLoader('run-templates/'))
 
@@ -48,12 +49,14 @@ def run_job(config: JobConfig):
 
     os.system(f'sbatch {job_file}')
     print(f'Job submitted with sbatch {job_file}')
+    if enable_run_sleep:
+        sleep()
 
 def sleep():
     """
-    Sleep for a random duration between 0.5 and 0.8 seconds.
+    Sleep for a random duration between 0.1 and 0.5 seconds.
     """
-    sleep_duration = random.uniform(0.5, 0.8)
+    sleep_duration = random.uniform(0.1, 0.5)
     print(f"Sleeping for {sleep_duration:.3f} seconds...")
     time.sleep(sleep_duration)
     print("Finished sleeping.")
@@ -61,8 +64,12 @@ def sleep():
 def main():
     parser = argparse.ArgumentParser(description="Submit jobs to the cluster")
     parser.add_argument("--seed-count", type=int, default=1, help="Number of random seeds to use.")
+    parser.add_argument("--run-sleep", type=bool, default=False, help="Enable sleep between job submissions.")
     main_args = parser.parse_args()
     seed_count = main_args.seed_count
+    global enable_run_sleep
+    # Set the global variable for sleep based on command line argument
+    enable_run_sleep = main_args.run_sleep
     if seed_count < 1:
         raise ValueError("Seed count must be at least 1.")
     seeds = [random.randint(0, 2**32) for _ in range(seed_count)]
