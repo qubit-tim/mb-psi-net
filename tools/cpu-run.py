@@ -64,7 +64,7 @@ def sleep():
 def main():
     parser = argparse.ArgumentParser(description="Submit jobs to the cluster")
     parser.add_argument("--seed-count", type=int, default=1, help="Number of random seeds to use.")
-    parser.add_argument("--run-sleep", type=bool, default=False, help="Enable sleep between job submissions.")
+    parser.add_argument("--run-sleep", action='store_true', help="Enable sleep between job submissions.")
     main_args = parser.parse_args()
     seed_count = main_args.seed_count
     global enable_run_sleep # pylint:disable=global-statement
