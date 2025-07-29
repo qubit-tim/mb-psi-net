@@ -90,7 +90,7 @@ def main():
             error_file='/scratch/%u/%x-%N-%j.err',
             mail_type='NONE',
             mail_user='tcosgrov@gmu.edu',
-            run_limit='3-00:00',
+            run_limit='5-00:00',
             cpus_per_task=1,
             mem_per_cpu='4G',
             modules=['gnu/12.3.0', 'python/3.12.1-33'],

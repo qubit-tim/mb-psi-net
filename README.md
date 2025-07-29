@@ -14,11 +14,15 @@ pip install -r requirements.txt --upgrade
 
 # SLURM Commands
 1. sgpu - shows gpuq stats (Total, Allocated, Idle)
-    1. -v adds detailed stats
+    * -v adds detailed stats
 1. squeue -u $USER - 
 1. sreport cluster utilization -T 'ALL'
 1. sinfo -N -o "%N %c" | grep hop | sort -u | awk -F' ' '{sum += $2} END {print sum}'
-    1. This will show available CPU cores (I think)
+    * This will show available CPU cores (I think)
+1. squeue -u $USER --sort="-M"
+    * shows user jobs based on runtime decending
+1. squeue -u $USER -t RUNNING
+    * shows running jobs, add 'wc -l' to get a count
 
 TODO: Find a command to view available CPU nodes / cores
 

@@ -1,5 +1,6 @@
 # Output files and directories to ignore
 out/
+results/
 
 # macOS-specific excludes
 .DS_Store
